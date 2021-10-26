@@ -2,6 +2,7 @@ import csv
 import re
 import text2emotion as te
 
+MAX_LINES = 100
 START = "[START POEM]"
 DELIM = "====================================="
 
@@ -14,11 +15,11 @@ def remove_excessive_newlines(text):
 with open('PoetryFoundationData.csv', newline='', encoding='utf8') as csvfile:
 	reader = csv.DictReader(csvfile)
 	out = open("Processed_2.txt", "w")
-	i = 0
 	final_string = ""
-	for line in reader:
+	for (i,line) in enumerate(reader):
+		if(i> MAX_LINES):
+			break
 		print("Working on: " + str(i))
-		i += 1
 		text = remove_excessive_newlines(line['Poem'])
 		metadata = {}
 		emotion = te.get_emotion(text)
