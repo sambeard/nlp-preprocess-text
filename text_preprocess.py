@@ -4,7 +4,7 @@ import text2emotion as te
 START = "[START POEM]"
 DELIM = "====================================="
 
-with open('PoetryFoundationData.csv', newline='') as csvfile:
+with open('PoetryFoundationData.csv', newline='', encoding='utf8') as csvfile:
 	reader = csv.DictReader(csvfile)
 	out = open("Processed_2.txt", "w")
 	i = 0
