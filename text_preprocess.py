@@ -117,4 +117,4 @@ if __name__ == "__main__":
 	writProc.join()
 	feedProc.join()
 	for p in calcProc:
-		p.start()
+		p.join()
