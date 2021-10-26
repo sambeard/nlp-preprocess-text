@@ -14,7 +14,7 @@ def remove_excessive_newlines(text):
 
 with open('PoetryFoundationData.csv', newline='', encoding='utf8') as csvfile:
 	reader = csv.DictReader(csvfile)
-	out = open("Processed_2.txt", "w")
+	out = open("out\processed.txt", "w", encoding="utf8")
 	final_string = ""
 	for (i,line) in enumerate(reader):
 		if(i> MAX_LINES):
