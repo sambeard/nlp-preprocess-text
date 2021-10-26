@@ -1,3 +1,3 @@
 # text preprocess for final project NLP
 
-info here
+Data set was acquired from: https://www.kaggle.com/tgdivy/poetry-foundation-poems
