@@ -5,8 +5,13 @@ import text2emotion as te
 import multiprocessing
 from multiprocessing import Process, Queue, cpu_count
 import sys
+from phoneme_features import get_styles
+import queue
 
 MAX_LINES = 100
+FORM = "Form:"
+ALLITERATION = "Alliteration:"
+ASSONANCE = "Assonance:"
 TITLE = "Title:"
 TAGS = "Tags:"
 EMOTIONS = "Emotions:"
@@ -40,8 +45,20 @@ def process_emotions(emotions):
 	
 	return ", ".join(adjectives)
 
+def process_rhyme_score(score):
+	if(score<0.1):
+		return ""
+	elif (score<0.3):
+		return "Low"
+	elif (score < 0.5):
+		return "Medium"
+	elif (score < 0.75):
+		return "High"
+	else:
+		return "Very High"
+
 def smth_or_none(txt):
-	return txt if len(txt) else "-"
+	return txt if txt else "-"
 
 def process_line(qin, qout):
 	while(True):
@@ -51,8 +68,12 @@ def process_line(qin, qout):
 				print("thread has finished")
 				break			
 			text = remove_excessive_newlines(line['Poem'])
+			features = get_styles(text)
 			lines = [
 				"{0} {1}".format(TITLE,	smth_or_none(remove_trailing_whitespace(remove_excessive_newlines(line['Title'])))),
+				"{0} {1}".format(FORM,	"Haiku" if features["form"]["is_haiku"] else "-"),
+				"{0} {1}".format(ALLITERATION,	smth_or_none(process_rhyme_score(features["rhyme"]["alliteration"]))),
+				"{0} {1}".format(ASSONANCE,	smth_or_none(process_rhyme_score(features["rhyme"]["assonance"]))),
 				"{0} {1}".format(TAGS, smth_or_none(line['Tags'])),
 				"{0} {1}".format(EMOTIONS, smth_or_none(process_emotions(te.get_emotion(text)))),
 				START ,
@@ -60,7 +81,7 @@ def process_line(qin, qout):
 				DELIM + "\n\n"
 			]
 			qout.put((i, "\n".join(lines)))
-		except:
+		except queue.Empty:
 			time.sleep(.1)
 
 def write_to_file(q, total):
