@@ -49,7 +49,6 @@ def is_haiku(tokens, phoneme_list):
     
     for (i,phs) in enumerate(phoneme_list):
         syllables = set([pronouncing.syllable_count(ph) for ph in phs])
-        print(syllables)
         syllables = syllables if len(syllables) > 0 else estimate_syllables(tokens[i])
         syllables = list(set(syllables))
         all_syllables.append(syllables)
