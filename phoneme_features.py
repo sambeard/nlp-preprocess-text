@@ -70,7 +70,7 @@ def get_styles(poem, window_size=4):
             "is_haiku": is_haiku(tokens, phonemes_for_tokens),
         },
         "rhyme": {
-            "alliteration": len(alliterations)/len(tokens),
-            "assonance": len(assonances)/len(tokens)
+            "alliteration": len(alliterations)/max(1,len(tokens)),
+            "assonance": len(assonances)/max(1,len(tokens))
         }
     }
