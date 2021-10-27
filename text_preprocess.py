@@ -7,16 +7,7 @@ from multiprocessing import Process, Queue, cpu_count
 import sys
 from phoneme_features import get_styles
 import queue
-
-MAX_LINES = 100
-FORM = "Form:"
-ALLITERATION = "Alliteration:"
-ASSONANCE = "Assonance:"
-TITLE = "Title:"
-TAGS = "Tags:"
-EMOTIONS = "Emotions:"
-START = "Poem:"
-DELIM = "====================================="
+from consts import TITLE, FORM, ALLITERATION, ASSONANCE, TAGS, EMOTIONS, START, DELIM
 
 def remove_trailing_whitespace(text):
 	return "\n".join(re.findall(r"^\s*\b(.*?)\s*$", text, flags=re.MULTILINE))
