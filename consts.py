@@ -1,0 +1,5 @@
+TITLE = "Title:"
+TAGS = "Tags:"
+EMOTIONS = "Emotions:"
+START = "Poem:"
+DELIM = "====================================="

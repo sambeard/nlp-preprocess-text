@@ -5,13 +5,9 @@ import text2emotion as te
 import multiprocessing
 from multiprocessing import Process, Queue, cpu_count
 import sys
+from consts import TITLE, TAGS, EMOTIONS, START, DELIM
 
 MAX_LINES = 100
-TITLE = "Title:"
-TAGS = "Tags:"
-EMOTIONS = "Emotions:"
-START = "Poem:"
-DELIM = "====================================="
 
 def remove_trailing_whitespace(text):
 	return "\n".join(re.findall(r"^\s*\b(.*?)\s*$", text, flags=re.MULTILINE))
