@@ -65,7 +65,11 @@ def get_styles(poem, window_size=4):
     (alliterations, assonances) = alliteration_and_assonance(tokens, phonemes_for_tokens, window_size)
 
     return {
-        "is_haiku": is_haiku(tokens, phonemes_for_tokens),
-        "alliteration_score": len(alliterations)/len(tokens),
-        "assonance_score": len(assonances)/len(tokens)
+        "form":{
+            "is_haiku": is_haiku(tokens, phonemes_for_tokens),
+        },
+        "rhyme": {
+            "alliteration": len(alliterations)/len(tokens),
+            "assonance": len(assonances)/len(tokens)
+        }
     }
