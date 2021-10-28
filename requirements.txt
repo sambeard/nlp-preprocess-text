@@ -2,3 +2,4 @@ aitextgen
 text2emotion
 pronouncing
 tensorflow
+prosodic
