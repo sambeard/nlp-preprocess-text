@@ -4,6 +4,10 @@ from pickle import FALSE
 import pronouncing
 from nltk.tokenize import word_tokenize
 import re
+import string
+import prosodic
+prosodic.config['print_to_screen'] = 0
+prosodic.config['en_TTS_ENGINE'] = 1
 
 
 PHONEME_TO_TYPE = dict({(k,v[0]) for (k,v) in pronouncing.cmudict.phones()})
@@ -35,7 +39,6 @@ def alliteration_and_assonance(tokens, phoneme_list, window_size):
                         
     return (alliterations,assonances)
 
-
 def estimate_syllables(word):
     approx = int(.6 + len(word)/3.2)
     _range = max(3, int(len(word)/3))
@@ -55,7 +58,153 @@ def is_haiku(tokens, phoneme_list):
 
     possible_total_syllables = reduce(lambda x,y: [ i+n for i in x for n in y], all_syllables,[0])
     
-    return 17 in set(possible_total_syllables)    
+    return 17 in set(possible_total_syllables)
+
+def get_stresses(line):
+    text = prosodic.Text(line)
+    text.parse(meter='default_english')
+    parses = text.bestParses()
+    stresses = []
+    for parse in parses:
+        if parse is None:
+            continue
+        meter = ""
+        for pos in parse.positions:
+            val = pos.meterVal
+            if val == "w":
+                meter += "0" # I just prefer this representation
+            elif val == "s":
+                meter += "1"
+        stresses.append(meter)
+    return stresses
+
+def stresses_to_meter(stresses):
+    meter_table = {
+        "01": "Iambic",
+        "10": "Trochaic",
+        "11": "Spondaic",
+        "001": "Anapestic",
+        "100": "Dactylic",
+        "010": "Amphibrachic",
+        "00": "Pyrrhic"
+    }
+    '''
+    This is an ambiguous state machine, let's use the following flags:
+    0: No meter found.
+    n: End of state, found n copies.
+    -n: End of state, go back n, also move pointer back n
+    In all cases, simply grab the correct one from the table
+    '''
+    meter_tree = {
+        "0": {
+            "0": {
+                "0": { # 00, third 0 is second set of 00. This could be done with -1 but let us continue for speed
+                    "0": 2,
+                    "1": 0 # Found 00 01 which is not a valid consistent meter
+                }, 
+                "1": 1 # Must be 001
+            },
+            "1": {
+                "0": { # Ambiguous, need next token
+                    "0": -1,
+                    "1": 2
+                },
+                "1": 0
+            }
+        },
+        "1": {
+            "0": {
+                "0": 1,
+                "1": {
+                    "0": 2,
+                    "1": 0
+                }
+            },
+            "1": {
+                "0": 0,
+                "1": {
+                    "0": 0,
+                    "1": 2
+                }
+            }
+        }
+    }
+    count_table = {
+        1: "monometer",
+        2: "dimeter",
+        3: "trimeter",
+        4: "tetrameter",
+        5: "pentameter",
+        6: "hexameter",
+        7: "heptameter",
+        8: "octameter"
+    }
+    pointer = 0
+    stack = ""
+    counter = 0
+    sub_tree = meter_tree
+    while pointer < len(stresses) and counter == 0:
+        val = stresses[pointer]
+        if val == "2":
+            val = "1"
+        stack += val
+        sub_tree = sub_tree[val]
+        if not isinstance(sub_tree, dict): # We have found a leaf
+            if sub_tree == 0:
+                return None
+            elif sub_tree < 0:
+                pointer += sub_tree
+                add = abs(sub_tree)
+            else:
+                add = sub_tree
+                pointer += 1
+            counter += add
+            stack = stack[:(add//2)+1]
+        else:
+            pointer += 1
+    if counter == 0 or len(stresses) % len(stack) != 0:
+        return None
+    else: # We have found a pattern, now to see if it repeats
+        patt_pointer = 0
+        while pointer < len(stresses):
+            val = stresses[pointer]
+            req = stack[patt_pointer]
+            if val != req:
+                return None
+            pointer += 1
+            patt_pointer += 1
+            if patt_pointer >= len(stack):
+                counter += 1
+                patt_pointer = 0
+    style = meter_table[stack]
+    foot = counter
+    if foot in count_table:
+        foot = count_table[foot]
+    return style + " " + foot
+
+def get_meter(poem):
+    meters = []
+    lines = poem.splitlines()
+    for line in lines:
+        stresses = get_stresses(line)
+        line_meters = []
+        for stress in stresses:
+            meter = stresses_to_meter(stress)
+            line_meters.append(meter)
+        meters.append(line_meters)
+    scores = {}
+    for meter in meters:
+        for line_meter in meter:
+            if line_meter in scores:
+                scores[line_meter] += 1
+            else:
+                scores[line_meter] = 1
+    scores = sorted(scores.items(), key=lambda x:x[1], reverse=True)
+    if not scores:
+        return None
+    if scores[0][0] is None:
+        return scores[1][0]
+    return scores[0][0]
 
 def get_styles(poem, window_size=4):
     poem = re.sub(r"(\w+)-(\w+)",r"\1 \2",poem)
