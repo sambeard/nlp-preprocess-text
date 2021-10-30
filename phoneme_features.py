@@ -9,6 +9,8 @@ import prosodic
 prosodic.config['print_to_screen'] = 0
 prosodic.config['en_TTS_ENGINE'] = 1
 
+METER_LIMIT = 5
+METER_LINE_LIMIT = 120 # The longer the line the longer it takes to analyze, so let's just skip them for speed
 
 PHONEME_TO_TYPE = dict({(k,v[0]) for (k,v) in pronouncing.cmudict.phones()})
 
@@ -106,7 +108,7 @@ def stresses_to_meter(stresses):
             },
             "1": {
                 "0": { # Ambiguous, need next token
-                    "0": -1,
+                    "0": -1, # You could expand this state but that's ugly (010 010)
                     "1": 2
                 },
                 "1": 0
@@ -180,18 +182,21 @@ def stresses_to_meter(stresses):
     foot = counter
     if foot in count_table:
         foot = count_table[foot]
-    return style + " " + foot
+    return style + " " + str(foot)
 
 def get_meter(poem):
     meters = []
     lines = poem.splitlines()
-    for line in lines:
-        stresses = get_stresses(line)
-        line_meters = []
-        for stress in stresses:
-            meter = stresses_to_meter(stress)
-            line_meters.append(meter)
-        meters.append(line_meters)
+    if len(lines) < 2:
+        return None
+    for line in lines[:METER_LIMIT]:
+        if len(line) <= METER_LINE_LIMIT:
+            stresses = get_stresses(line)
+            line_meters = []
+            for stress in stresses:
+                meter = stresses_to_meter(stress)
+                line_meters.append(meter)
+            meters.append(line_meters)
     scores = {}
     for meter in meters:
         for line_meter in meter:
@@ -200,11 +205,7 @@ def get_meter(poem):
             else:
                 scores[line_meter] = 1
     scores = sorted(scores.items(), key=lambda x:x[1], reverse=True)
-    if not scores:
-        return None
-    if scores[0][0] is None:
-        return scores[1][0]
-    return scores[0][0]
+    return scores
 
 def get_styles(poem, window_size=4):
     poem = re.sub(r"(\w+)-(\w+)",r"\1 \2",poem)
@@ -213,6 +214,13 @@ def get_styles(poem, window_size=4):
 
     (alliterations, assonances) = alliteration_and_assonance(tokens, phonemes_for_tokens, window_size)
 
+    meter = get_meter(poem)
+    main_meter = None
+    if meter:
+        main_meter = meter[0][0]
+        if main_meter is None and len(meter) > 1: # If it can't analyze most of the lines properly
+            main_meter = meter[1][0]
+
     return {
         "form":{
             "is_haiku": is_haiku(tokens, phonemes_for_tokens),
@@ -220,5 +228,9 @@ def get_styles(poem, window_size=4):
         "rhyme": {
             "alliteration": len(alliterations)/max(1,len(tokens)),
             "assonance": len(assonances)/max(1,len(tokens))
+        },
+        "meter": {
+            "main": main_meter,
+            "all": meter
         }
     }
