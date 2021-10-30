@@ -79,7 +79,7 @@ def process_line(qin, qout):
 			time.sleep(.1)
 
 def write_to_file(q, total):
-	out = open("out/processed2.txt", "w", encoding="utf8")
+	out = open("out/processed.txt", "w", encoding="utf8")
 	count = 0
 	while True:
 		try:
