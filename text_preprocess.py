@@ -3,11 +3,12 @@ import time
 import re
 import text2emotion as te
 import multiprocessing
+import os
 from multiprocessing import Process, Queue, cpu_count
 import sys
-from phoneme_features import get_styles
+import phoneme_features
 import queue
-from consts import TITLE, FORM, ALLITERATION, ASSONANCE, TAGS, EMOTIONS, START, DELIM
+from consts import TITLE, FORM, ALLITERATION, ASSONANCE, TAGS, EMOTIONS, START, DELIM, METER
 
 def remove_trailing_whitespace(text):
 	return "\n".join(re.findall(r"^\s*\b(.*?)\s*$", text, flags=re.MULTILINE))
@@ -59,31 +60,33 @@ def process_line(qin, qout):
 				print("thread has finished")
 				break			
 			text = remove_excessive_newlines(line['Poem'])
-			features = get_styles(text)
-			lines = [
-				"{0} {1}".format(TITLE,	smth_or_none(remove_trailing_whitespace(remove_excessive_newlines(line['Title'])))),
-				"{0} {1}".format(FORM,	"Haiku" if features["form"]["is_haiku"] else "-"),
-				"{0} {1}".format(ALLITERATION,	smth_or_none(process_rhyme_score(features["rhyme"]["alliteration"]))),
-				"{0} {1}".format(ASSONANCE,	smth_or_none(process_rhyme_score(features["rhyme"]["assonance"]))),
-				"{0} {1}".format(TAGS, smth_or_none(line['Tags'])),
-				"{0} {1}".format(EMOTIONS, smth_or_none(process_emotions(te.get_emotion(text)))),
-				START ,
-				text + "\n",
-				DELIM + "\n\n"
-			]
-			qout.put((i, "\n".join(lines)))
+			if text:
+				features = phoneme_features.get_styles(text)
+				lines = [
+					"{0} {1}".format(TITLE,	smth_or_none(remove_trailing_whitespace(remove_excessive_newlines(line['Title'])))),
+					"{0} {1}".format(FORM,	"Haiku" if features["form"]["is_haiku"] else "-"),
+					"{0} {1}".format(ALLITERATION,	smth_or_none(process_rhyme_score(features["rhyme"]["alliteration"]))),
+					"{0} {1}".format(ASSONANCE,	smth_or_none(process_rhyme_score(features["rhyme"]["assonance"]))),
+					"{0} {1}".format(TAGS, smth_or_none(line['Tags'])),
+					"{0} {1}".format(EMOTIONS, smth_or_none(process_emotions(te.get_emotion(text)))),
+					"{0} {1}".format(METER, smth_or_none(features['meter']['main'])),
+					START,
+					text + "\n",
+					DELIM + "\n"
+				]
+				qout.put((i, "\n".join(lines)))
 		except queue.Empty:
 			time.sleep(.1)
 
 def write_to_file(q, total):
-	out = open("out\processed.txt", "w", encoding="utf8")
+	out = open("out/processed.txt", "w", encoding="utf8")
 	count = 0
 	while True:
 		try:
 			i, txt = q.get(block = False)
 			count += 1
 			if(count %10 == 0 and count != 0):
-				sys.stdout.write("\rFinished line {0:7} of {1:7}".format(count,total))
+				sys.stdout.write(os.linesep + "Finished line {0:7} of {1:7}".format(count,total))
 				sys.stdout.flush()
 			out.write(txt)
 		except:
@@ -110,7 +113,7 @@ if __name__ == "__main__":
 	total = 0
 	with open('PoetryFoundationData.csv', newline='', encoding='utf8') as csvfile:
 		reader = csv.DictReader(csvfile)
-		total = max(i for (i,line) in enumerate(reader))
+		total = len(list(reader))
 	print("Will process {0} lines".format(total))
 	print("============================")
 	print("Starting...")
